@@ -1,4 +1,5 @@
 library(caret)
+library(Metrics)
 library(glmnet)
 
 prostate.data = read.csv('prostate.csv')
@@ -50,10 +51,10 @@ print("Least Squares Regression")
 print(mean(se(prostate.test.response, predict(leastsquares.all, prostate.test))))
 
 print("Ridge Regression")
-print(mean(se(prostate.test.response, predict(ridge.cv, prostate.test.features.matrix, s=0.05))))
+print(mean(se(prostate.test.response, predict(ridge.cv, prostate.test.features.matrix))))
 
 print("Lasso Regression")
-print(mean(se(prostate.test.response, predict(lasso.cv, prostate.test.features.matrix, s=0.1))))
+print(mean(se(prostate.test.response, predict(lasso.cv, prostate.test.features.matrix))))
 print(coef(lasso.cv))
 
 leastsquares.remaining <- lm(lcavol ~ lcp + lpsa, data=prostate.train)
