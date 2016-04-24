@@ -23,7 +23,10 @@ citations = {}
 def is_original_article(article_info):
     """ Checks if a line of text from citations.TiAbMe
     is a valid citation. """
-    return article_info[1].lower() == 'c'
+    if len(article_info) < 3:
+        return False
+    else:
+        return article_info[1].lower() == 'c'
 
 
 def grouper(iterable, n, fillvalue=None):
@@ -36,15 +39,18 @@ def grouper(iterable, n, fillvalue=None):
 def process_citations(related_citations):
     """ Return a list of citation IDs given a list of citations.
     Also insert each citation into the citations dictionary. """
+    global citations
     # Got some help from here:
     # https://stackoverflow.com/questions/6335839/python-how-to-read-n-number-of-lines-at-a-time#
-    cites = []
+    cites = []  # Sources that a research paper cites.
     # Group data for each citation together.
     # https://docs.python.org/3/library/itertools.html#itertools.islice
-    for citation in grouper(related_citations, 3):
-        pmid = citation[0].split('|')[0]
+    for citation in grouper(related_citations, 4):
+        # PudMed ID of a research paper
+        pmid = int(citation[0].strip(' \n').split('|')[0])
         cites.append(pmid)
-        title, abstract, mesh = map(lambda x: x.split('|')[2], citation)
+        _, title, abstract, mesh = map(
+            lambda x: x.strip(' \n').split('|')[2:], citation)
         if pmid not in citations:  # Insert a citation into the dict.
             citations[pmid] = {
                 'title': title, 'abstract': abstract, 'mesh': mesh, 'cites': []
@@ -54,42 +60,40 @@ def process_citations(related_citations):
             citations[pmid]['title'] = title
             citations[pmid]['abstract'] = abstract
             citations[pmid]['mesh'] = mesh
-    # while True:
-    # A citation is compromised of a Title, Abstract, and MeSH terms.
-    #     citation = tuple(islice(related_citations, 3))
-    # if not citation:  # No more lines to read.
-    #         break
-    #     pmid = citation[0].split('|')[0]
-    #     cites.append(pmid)
-    #     title, abstract, mesh = map(lambda x: x.split('|')[2], citation)
-    # if pmid not in citations:  # Insert a citation into the dict.
-    #         citations[pmid] = {
-    #             'title': title, 'abstract': abstract, 'mesh': mesh, 'cites': []
-    #         }
-    # Case where a top-level article is cited by another top-level article.
-    #     else:
-    #         citations[pmid]['title'] = title
-    #         citations[pmid]['abstract'] = abstract
-    #         citations[pmid]['mesh'] = mesh
     return cites
 
 
 def main():
-    with open('citations.TiAbMe', 'r') as f:
+    global citations
+    with open('ourdat/citations_small200.TiAbMe', 'r') as f, \
+            open('paperdat/SMALL200/S200.TiAbMe') as f2:
         while True:
-            article_info = f.readline().split('|')
+            article_info = f.readline().strip(' \n').split('|')
             # Read the citations for a given pmid, and store into dict.
             if is_original_article(article_info):
                 pmid = int(article_info[0])
-                num_citations = int(article_info[2])
+                num_citations = int(article_info[2]) * 4
                 related_citations = list(islice(f, num_citations))
-                citations[pmid]['cites'] = process_citations(related_citations)
-            elif article_info == []:
+                if pmid not in citations:
+                    citations[pmid] = {
+                        'cites': process_citations(related_citations)
+                    }
+                else:
+                    citations[pmid]['cites'] = process_citations(
+                        related_citations)
+            elif article_info == [''] or article_info == []:
                 break
             else:
                 raise Exception('citations file was formatted incorrectly.\n'
-                                'Expected article metadata with citation count or '
-                                'newline character.')
-
+                                'Expected article metadata with citation count'
+                                ' or newline character.')
+        for citation in grouper(f2, 3):  # Citations are grouped in 3
+            pmid = int(citation[0].strip(' \n').split('|')[0])
+            title, abstract, mesh = map(
+                lambda x: x.strip(' \n').split('|')[2:], citation)
+            citations[pmid]['title'] = title
+            citations[pmid]['abstract'] = abstract
+            citations[pmid]['mesh'] = mesh
+    print(citations[12386918])
 if __name__ == '__main__':
     main()
