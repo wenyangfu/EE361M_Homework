@@ -51,6 +51,9 @@ def get_article_info(pubmed_ids):
     articles = []
     for record in records:
         article_info = dict()
+        
+        if 'MedlineCitation' not in record:
+            continue
 
         article_info['id'] = record['MedlineCitation']['PMID']
         article_info['title'] = record['MedlineCitation']['Article']['ArticleTitle']
@@ -89,10 +92,17 @@ def write_to_file(f, original_id, citation_articles):
         f.write('{}|m|{}\n'.format(article['id'], terms))
 
 def write_citations(f, pubmed_id):
-    pmc_id = get_pmc_id(pubmed_id)
-    citations = get_citations(pmc_id)
-    citation_articles = get_article_info(citations)
-    write_to_file(f, pubmed_id, citation_articles) 
+    try:
+        pmc_id = get_pmc_id(pubmed_id)
+        citations = get_citations(pmc_id)
+        citation_articles = get_article_info(citations)
+        write_to_file(f, pubmed_id, citation_articles) 
+    except AttributeError as e:
+        print(pubmed_id, e)
+    except RuntimeError as e:
+        print(str(e))
+        if(str(e) == 'Supplied id parameter is empty.'): pass
+        else: raise e
     
 
 if __name__ == '__main__':
