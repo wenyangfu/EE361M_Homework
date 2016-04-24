@@ -18,8 +18,7 @@ def bigram_overlap(article_title, article_abstract, term):
 
     for bigram in bigrams:
         gram = bigram[0] + " " + bigram[1]
-        print(gram)
-
+        
         if gram in article_title:
             overlap += 1
 
@@ -92,5 +91,13 @@ if __name__ == '__main__':
                 candidate_terms.extend(articles[pmid]["terms"])
 
         #print(candidate_terms)
+        print("Article: {}".format(article))
+        for term in candidate_terms:
+            features = dict()
+            features['unigram'] = unigram_overlap(attributes["title"], term)
+            features['bigram'] = bigram_overlap(attributes["title"], attributes["abstract"], term)
+
+            print("Candidate Term: {}, Features: {}".format(term, features))
+        print("\n")
 
 
