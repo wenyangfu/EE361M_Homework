@@ -1,5 +1,9 @@
 
 def unigram_overlap(article_title, term):
+    ''' Returns the number of unigrams that overlap between the
+    title of an article and a MeSH term.
+    
+    Assumes article_title and term are strings. '''
     words = term.split()
     overlap = 0
     
@@ -11,6 +15,10 @@ def unigram_overlap(article_title, term):
 
 
 def bigram_overlap(article_title, article_abstract, term):
+    ''' Returns the number of bigrams that overlap between the
+    title and abstract of an article and a MeSH term.
+    
+    Assumes article_title, article_abstract, and term are all strings. '''
     words = term.split()
     bigrams = zip(words, words[1:])
     overlap = 0
@@ -28,6 +36,13 @@ def bigram_overlap(article_title, article_abstract, term):
 
 
 def neighboring_features(articles, article_neighbors, term):
+    ''' Returns two features. The first is the count of how many times
+    the given MeSH term appears as a term in the article_neighbors. The
+    second is the total neighborosity score of each article_neighbors that
+    the term appears in.
+
+    Assumes articles is the main dict, article_neighbors are a tuple of (pmid, score),
+    and term is a string. '''
     count = 0
     total_score = 0.0
 
@@ -50,8 +65,8 @@ def preprocess_terms(terms):
     return terms
 
 
-# Reading in articles from file
 def add_articles_from_file(f, articles):
+    ''' Reads file f and adds all articles to the articles dict. '''
     for line in f:
         items = line.split('|')
 
@@ -76,6 +91,8 @@ def add_articles_from_file(f, articles):
 
 
 def initalize_articles():
+    ''' Creates a dict of articles.
+    The dict includes the SMALL200 articles and all of the neighbors. '''
     articles = dict()
 
     # Original articles (to predict)
@@ -90,6 +107,8 @@ def initalize_articles():
 
 
 def add_neighbors_to_articles(articles):
+    ''' Adds a list of neighboring PMIDs to each of the original articles
+    in the articles dict. '''
     with open("paperdat/SMALL200/S200_50neighbors.score", 'r') as f:
         for line in f:
             pmid, neighbor, score = line.split()
