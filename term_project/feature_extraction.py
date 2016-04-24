@@ -27,6 +27,19 @@ def bigram_overlap(article_title, article_abstract, term):
     return overlap
 
 
+def neighboring_frequency(articles, article_neighbors, term):
+    count = 0
+
+    for neighbor, _ in article_neighbors:
+        if "terms" not in articles[neighbor]:
+            continue
+
+        if term in articles[neighbor]["terms"]:
+            count += 1
+
+    return count
+
+
 def preprocess_terms(terms):
     terms = [item.split("!")[0] for item in terms]
     terms = [term.split("*")[0] for term in terms]
@@ -100,6 +113,9 @@ if __name__ == '__main__':
             if "terms" in articles[pmid]:
                 candidate_terms.extend(articles[pmid]["terms"])
 
+        # We don't want duplicate terms
+        candidate_terms = set(candidate_terms)
+
         # Make features
         # Just printing them for now
         print("Article: {}".format(article))
@@ -107,6 +123,7 @@ if __name__ == '__main__':
             features = dict()
             features['unigram'] = unigram_overlap(attributes["title"], term)
             features['bigram'] = bigram_overlap(attributes["title"], attributes["abstract"], term)
+            features['neighbor_frequency'] = neighboring_frequency(articles, attributes["neighbors"], term)
 
             print("Candidate Term: {}, Features: {}".format(term, features))
         print("\n")
