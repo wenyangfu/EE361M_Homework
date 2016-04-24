@@ -55,14 +55,16 @@ def add_articles_from_file(f, articles):
 def initalize_articles():
     articles = dict()
 
-    # Original articles
+    # Original articles (to predict)
     with open("paperdat/SMALL200/S200.TiAbMe", 'r') as f:
         add_articles_from_file(f, articles)
 
+    # Neighboring articles
     with open("paperdat/SMALL200/S200_50neighbors.TiAbMe", 'r') as f:
         add_articles_from_file(f, articles)
 
     return articles
+
 
 def add_neighbors_to_articles(articles):
     with open("paperdat/SMALL200/S200_50neighbors.score", 'r') as f:
@@ -84,13 +86,14 @@ if __name__ == '__main__':
         if "neighbors" not in attributes:    
             continue
 
+        # Find candidate terms (neighboring articles)
         candidate_terms = []
-
         for pmid, _ in attributes["neighbors"]:
             if "terms" in articles[pmid]:
                 candidate_terms.extend(articles[pmid]["terms"])
 
-        #print(candidate_terms)
+        # Make features
+        # Just printing them for now
         print("Article: {}".format(article))
         for term in candidate_terms:
             features = dict()
