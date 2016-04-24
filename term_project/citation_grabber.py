@@ -1,4 +1,8 @@
 import requests
+import requests_cache
+
+requests_cache.install_cache('citations_cache')
+
 from bs4 import BeautifulSoup
 
 from Bio import Entrez
