@@ -27,17 +27,19 @@ def bigram_overlap(article_title, article_abstract, term):
     return overlap
 
 
-def neighboring_frequency(articles, article_neighbors, term):
+def neighboring_features(articles, article_neighbors, term):
     count = 0
+    total_score = 0.0
 
-    for neighbor, _ in article_neighbors:
+    for neighbor, score in article_neighbors:
         if "terms" not in articles[neighbor]:
             continue
 
         if term in articles[neighbor]["terms"]:
             count += 1
+            total_score += float(score)
 
-    return count
+    return count, total_score
 
 
 def preprocess_terms(terms):
@@ -123,7 +125,10 @@ if __name__ == '__main__':
             features = dict()
             features['unigram'] = unigram_overlap(attributes["title"], term)
             features['bigram'] = bigram_overlap(attributes["title"], attributes["abstract"], term)
-            features['neighbor_frequency'] = neighboring_frequency(articles, attributes["neighbors"], term)
+            neighbor_freq, neighbor_score = neighboring_features(articles, attributes["neighbors"], term)
+
+            features['neighbor_frequency'] = neighbor_freq
+            features['neighbor_score'] = neighbor_score
 
             print("Candidate Term: {}, Features: {}".format(term, features))
         print("\n")
