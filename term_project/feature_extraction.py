@@ -52,16 +52,15 @@ def initalize_articles():
 
     return articles
 
-def neighbors_for_article(pmid):
-    neighbors = []
-
+def add_neighbors_to_articles(articles):
     with open("paperdat/SMALL200/S200_50neighbors.score", 'r') as f:
         for line in f:
-            info = line.split()
-            if info[0] == pmid:
-                neighbors.append(info[1])
+            pmid, neighbor, score = line.split()
+            
+            if "neighbors" not in articles[pmid]:
+                articles[pmid]["neighbors"] = []
 
-    return neighbors
+            articles[pmid]["neighbors"].append(neighbor)
 
 def terms_for_article(pmid):
     # Get the terms from the neighbors
@@ -71,5 +70,7 @@ def terms_for_article(pmid):
     return None
 
 if __name__ == '__main__':
-    initalize_articles()
+    articles = initalize_articles()
+    add_neighbors_to_articles(articles)
 
+    print(articles)
