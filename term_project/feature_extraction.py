@@ -1,5 +1,4 @@
 
-# Unigram/bigram feature extraction
 def unigram_overlap(article_title, term):
     words = term.split()
     overlap = 0
@@ -27,6 +26,15 @@ def bigram_overlap(article_title, article_abstract, term):
 
     return overlap
 
+
+def preprocess_terms(terms):
+    terms = [item.split("!")[0] for item in terms]
+    terms = [term.split("*")[0] for term in terms]
+    terms = [term.replace(",", "") for term in terms]
+
+    return terms
+
+
 # Reading in articles from file
 def add_articles_from_file(f, articles):
     for line in f:
@@ -47,7 +55,7 @@ def add_articles_from_file(f, articles):
         elif typ == 'a':
             articles[pmid]["abstract"] = items[2]
         elif typ == 'm':
-            articles[pmid]["terms"] = items[2:]
+            articles[pmid]["terms"] = preprocess_terms(items[2:])
         else:
             print("Unknown type of information")
 
