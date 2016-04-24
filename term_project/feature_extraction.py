@@ -18,8 +18,7 @@ def bigram_overlap(article_title, article_abstract, term):
 
     for bigram in bigrams:
         gram = bigram[0] + " " + bigram[1]
-        print(gram)
-
+        
         if gram in article_title:
             overlap += 1
 
@@ -32,6 +31,11 @@ def bigram_overlap(article_title, article_abstract, term):
 def add_articles_from_file(f, articles):
     for line in f:
         items = line.split('|')
+
+        # Remove newlines
+        while '\n' in items:
+            items.remove('\n')
+
         pmid = items[0]
         typ = items[1]
 
@@ -51,14 +55,16 @@ def add_articles_from_file(f, articles):
 def initalize_articles():
     articles = dict()
 
-    # Original articles
+    # Original articles (to predict)
     with open("paperdat/SMALL200/S200.TiAbMe", 'r') as f:
         add_articles_from_file(f, articles)
 
+    # Neighboring articles
     with open("paperdat/SMALL200/S200_50neighbors.TiAbMe", 'r') as f:
         add_articles_from_file(f, articles)
 
     return articles
+
 
 def add_neighbors_to_articles(articles):
     with open("paperdat/SMALL200/S200_50neighbors.score", 'r') as f:
@@ -68,11 +74,33 @@ def add_neighbors_to_articles(articles):
             if "neighbors" not in articles[pmid]:
                 articles[pmid]["neighbors"] = []
 
-            articles[pmid]["neighbors"].append(neighbor)
+            articles[pmid]["neighbors"].append((neighbor, score))
 
 
 if __name__ == '__main__':
     articles = initalize_articles()
     add_neighbors_to_articles(articles)
 
-    print(articles)
+    for article, attributes in articles.items():
+        # Skip neighboring articles
+        if "neighbors" not in attributes:    
+            continue
+
+        # Find candidate terms (neighboring articles)
+        candidate_terms = []
+        for pmid, _ in attributes["neighbors"]:
+            if "terms" in articles[pmid]:
+                candidate_terms.extend(articles[pmid]["terms"])
+
+        # Make features
+        # Just printing them for now
+        print("Article: {}".format(article))
+        for term in candidate_terms:
+            features = dict()
+            features['unigram'] = unigram_overlap(attributes["title"], term)
+            features['bigram'] = bigram_overlap(attributes["title"], attributes["abstract"], term)
+
+            print("Candidate Term: {}, Features: {}".format(term, features))
+        print("\n")
+
+
