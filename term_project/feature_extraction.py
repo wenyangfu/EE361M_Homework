@@ -32,6 +32,11 @@ def bigram_overlap(article_title, article_abstract, term):
 def add_articles_from_file(f, articles):
     for line in f:
         items = line.split('|')
+
+        # Remove newlines
+        while '\n' in items:
+            items.remove('\n')
+
         pmid = items[0]
         typ = items[1]
 
@@ -68,11 +73,24 @@ def add_neighbors_to_articles(articles):
             if "neighbors" not in articles[pmid]:
                 articles[pmid]["neighbors"] = []
 
-            articles[pmid]["neighbors"].append(neighbor)
+            articles[pmid]["neighbors"].append((neighbor, score))
 
 
 if __name__ == '__main__':
     articles = initalize_articles()
     add_neighbors_to_articles(articles)
 
-    print(articles)
+    for article, attributes in articles.items():
+        # Skip neighboring articles
+        if "neighbors" not in attributes:    
+            continue
+
+        candidate_terms = []
+
+        for pmid, _ in attributes["neighbors"]:
+            if "terms" in articles[pmid]:
+                candidate_terms.extend(articles[pmid]["terms"])
+
+        #print(candidate_terms)
+
+
