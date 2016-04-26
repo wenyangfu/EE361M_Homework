@@ -87,14 +87,14 @@ class TextPreprocessor():
         self.tokenize()
 
     def tokenize(self):
-        """ Separate all phrases in each article's abstract 
+        """ Separate all phrases in each article's abstract
         and title into lists of words, with the stopwords removed. """
         self.citations = {
-            k: {'cites': v['cites'], 
+            k: {'cites': v['cites'],
                 'title': self._tokenize(v['title']),
                 'abstract': self._tokenize(v['abstract']),
                 'mesh': v['mesh']
-            } for k,v in self.citations.items()
+                } for k, v in self.citations.items()
         }
 
     @classmethod
@@ -103,7 +103,7 @@ class TextPreprocessor():
         Returns a list of words (str). """
         # Got help from:
         # https://stackoverflow.com/questions/19560498/faster-way-to-remove-stop-words-in-python
-        return [word for word in text.split() 
+        return [word for word in text.split()
                 if word not in cls.cached_stopwords]
 
     def regularize(self):
@@ -123,7 +123,6 @@ class TextPreprocessor():
         # https://stackoverflow.com/questions/5512765/removing-punctuation-numbers-from-text-problem
         # print(text)
         return cls.punctuation.sub("", text)
-
 
     @staticmethod
     def is_original_article(article_info):
@@ -151,23 +150,25 @@ class TextPreprocessor():
             # PudMed ID of a citation
             cite_pmid = int(citation[0].strip(' \n').split('|')[0])
             cites.append(cite_pmid)
-            # The order we saved our data is slightly inconsistent with S200.TiAbMe
+            # The order we saved our data is slightly inconsistent
+            # with S200.TiAbMe
             # We did "orig_id", abstract, title, mesh
             # while S200 did title, abstract, mesh
             # The change in code reflects that.
-            _, abstract, title, mesh = map(
-                lambda x: x.strip(' \n').split('|')[2:], citation)
+
+            _, abstract, title, mesh = [data.strip(' \n').split('|')[2:]
+                                        for data in citation]
             # Note: The 2: slicing makes title, abstract, and mesh list objects
             # Had I only indexed into 2, then they would've all been str objs.
-            # I want to convert these into strings so they're easier to preprocess later.
+            # I casted them to strings so they're easier to preprocess later.
             title, abstract = ''.join(title), ''.join(abstract)
 
-            if cite_pmid not in self.citations:  # Insert a citation into the dict.
+            if cite_pmid not in self.citations:  # Add a new citation.
                 self.citations[cite_pmid] = {
                     'title': title, 'abstract': abstract,
                     'mesh': mesh, 'cites': []
                 }
-            else: # top-level paper is cited by another top-level paper
+            else:  # top-level paper is cited by another top-level paper
                 self.citations[cite_pmid]['title'] = title
                 self.citations[cite_pmid]['abstract'] = abstract
                 self.citations[cite_pmid]['mesh'] = mesh
@@ -178,28 +179,27 @@ class TextPreprocessor():
         else:
             self.citations[pmid]['cites'] = cites
 
-
     def _add_article(self, article):
         """ Insert article metadata into the citations dictionary. """
         pmid = int(article[0].strip(' \n').split('|')[0])
         # Note: The 2: slicing makes title, abstract, and mesh list objects
         # Had I only indexed into 2, then they would've all been str objs.
-        title, abstract, mesh = map(
-            lambda x: x.strip(' \n').split('|')[2:], article)
+        title, abstract, mesh = [data.strip(' \n').split('|')[2:]
+                                 for data in article]
         self.citations[pmid]['title'] = ''.join(title)
         self.citations[pmid]['abstract'] = ''.join(abstract)
         self.citations[pmid]['mesh'] = mesh
 
     def test_output(self):
         first_key = list(self.citations.keys())[32]
-        print(self.citations[15545608])
+        print(self.citations[first_key])
+
 
 def main():
     proc = TextPreprocessor()
     proc.test_output()
     proc.preprocess()
     proc.test_output()
-
 
 
 if __name__ == '__main__':
