@@ -1,3 +1,8 @@
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.metrics.pairwise import linear_kernel
+
+from text_preprocessor import TextPreprocessor
+
 
 def unigram_overlap(article_title, term):
     ''' Returns the number of unigrams that overlap between the
@@ -119,7 +124,39 @@ def add_neighbors_to_articles(articles):
             articles[pmid]["neighbors"].append((neighbor, score))
 
 
+def get_tf_idf_model(citations=None):
+    if citations is None:
+        citations = TextPreprocessor()
+        citations.preprocess()
+    
+    documents = [
+        citation['title'] + ' \n' + citation['abstract']
+        for citation in list(citations.values())
+    ]
+    bigram_vectorizer = CountVectorizer(ngram_range=(1,2))
+    bigrams = bigram_vectorizer.fit_transform(documents)
+
+    tfidf = TfidfTransformer().fit_transform(bigrams)
+
+    return citations, bigram_vectorizer, tfidf
+
+def get_most_similar_documents(tfdif_matrix, vectorizer, query):
+    query_tfidf = TfidfTransformer().fit_transform(vectorizer.transform([query]))
+    document_similarities = linear_kernel(query_tfidf, tfdif_matrix).flatten()
+    return document_similarities.argsort()[::-1]
+
+
 if __name__ == '__main__':
+    c, v, t = get_tf_idf_model()
+    r = get_most_similar_documents(t, v, 'williams syndrome')
+
+    citation_values = list(c.values())
+    from pprint import pprint
+    for index in r[:10]:
+        pprint(citation_values[index]['title'])
+
+    input("Hit enter to continue...")
+
     articles = initalize_articles()
     add_neighbors_to_articles(articles)
 
