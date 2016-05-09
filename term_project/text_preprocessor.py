@@ -158,6 +158,11 @@ class TextPreprocessor():
 
             _, abstract, title, mesh = [data.strip(' \n').split('|')[2:]
                                         for data in citation]
+            mesh_terms = { 
+                m.partition('!')[0].lower().strip().rstrip('*') 
+                for m in mesh 
+            } - { '' } # Remove empty term
+
             # Note: The 2: slicing makes title, abstract, and mesh list objects
             # Had I only indexed into 2, then they would've all been str objs.
             # I casted them to strings so they're easier to preprocess later.
@@ -166,12 +171,12 @@ class TextPreprocessor():
             if cite_pmid not in self.citations:  # Add a new citation.
                 self.citations[cite_pmid] = {
                     'title': title, 'abstract': abstract,
-                    'mesh': mesh, 'cites': []
+                    'mesh': list(mesh_terms), 'cites': []
                 }
             else:  # top-level paper is cited by another top-level paper
                 self.citations[cite_pmid]['title'] = title
                 self.citations[cite_pmid]['abstract'] = abstract
-                self.citations[cite_pmid]['mesh'] = mesh
+                self.citations[cite_pmid]['mesh'] = list(mesh_terms)
 
         # Connect a top-level paper to its citations.
         if pmid not in self.citations:
@@ -186,9 +191,16 @@ class TextPreprocessor():
         # Had I only indexed into 2, then they would've all been str objs.
         title, abstract, mesh = [data.strip(' \n').split('|')[2:]
                                  for data in article]
+
+
+        mesh_terms = { 
+            m.partition('!')[0].lower().strip().rstrip('*') 
+            for m in mesh 
+        } - { '' } # Remove empty term
+
         self.citations[pmid]['title'] = ''.join(title)
         self.citations[pmid]['abstract'] = ''.join(abstract)
-        self.citations[pmid]['mesh'] = mesh
+        self.citations[pmid]['mesh'] = list(mesh_terms)
 
     def test_output(self):
         first_key = list(self.citations.keys())[32]
