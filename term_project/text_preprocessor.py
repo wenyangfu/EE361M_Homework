@@ -89,6 +89,8 @@ class TextPreprocessor(UserDict):
             for article in self.grouper(f2, 3):  # Citations are grouped in 3
                 self._add_article(article)
 
+            self._add_neighbor_articles(f3)
+
     def preprocess(self):
         """ Apply all steps of the preprocessing pipeline. """
         self.regularize()
@@ -209,6 +211,37 @@ class TextPreprocessor(UserDict):
         self.citations[pmid]['title'] = ''.join(title)
         self.citations[pmid]['abstract'] = ''.join(abstract)
         self.citations[pmid]['mesh'] = list(mesh_terms)
+
+    def _add_neighbor_articles(self, f):
+        """ Insert neighbor article metadata into citations dictionary. """
+        # Since not all of the neighboring documents have a title, abstract,
+        # and terms, we have to go line by line and add information as we find it.
+        for line in f:
+            items = line.strip(' \n').split('|')
+            pmid = items[0]
+            typ = items[1]
+
+            # Add a new entry if it doesn't exist yet.
+            if pmid not in self.citations:
+                self.citations[pmid] = {
+                    'title': '', 'abstract': '',
+                    'mesh': [], 'cites': []
+                }
+
+            if typ == 't':
+                self.citations[pmid]['title'] = items[2]
+            elif typ == 'a':
+                self.citations[pmid]['abstract'] = items[2]
+            elif typ == 'm':
+                mesh = items[2:]
+                mesh_terms = { 
+                    m.partition('!')[0].lower().strip().rstrip('*') 
+                    for m in mesh 
+                } - { '' } # Remove empty term
+
+                self.citations[pmid]['mesh'] = list(mesh_terms)
+            else:
+                raise Exception('Unknown article information found when parsing neighbors.')
 
     def test_output(self):
         first_key = list(self.citations.keys())[32]
