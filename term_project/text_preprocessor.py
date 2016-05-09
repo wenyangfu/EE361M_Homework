@@ -7,6 +7,7 @@ in addition to their citations that can be found on PubMed central.
 import re
 from itertools import islice
 from itertools import zip_longest
+from collections import UserDict
 # Third party modules
 """ README: You must install the NLTK Corpus before this script can be run!!!
 You can find instructions here: http://www.nltk.org/data.html """
@@ -19,7 +20,7 @@ from nltk.corpus import stopwords
 # PMID_of_article_2|c|num_citations
 # -- list of citations for the above article --
 
-class TextPreprocessor():
+class TextPreprocessor(UserDict):
     """ Loads articles from the training/test set with their citations and
     preprocesses them. """
     # Citations for each article. Key is the PMID of an article.
@@ -29,6 +30,9 @@ class TextPreprocessor():
     # abstract is the abstract of an article,
     # and mesh is the MeSH terms for an article.
     citations = {}
+
+    data = citations
+
     cached_stopwords = stopwords.words("English")
     # punctuation and numbers to be removed
     punctuation = re.compile(r'[-.?!,":;()|0-9]')
@@ -212,7 +216,6 @@ def main():
     proc.test_output()
     proc.preprocess()
     proc.test_output()
-
 
 if __name__ == '__main__':
     main()
