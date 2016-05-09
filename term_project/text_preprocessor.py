@@ -33,15 +33,17 @@ class TextPreprocessor():
     # punctuation and numbers to be removed
     punctuation = re.compile(r'[-.?!,":;()|0-9]')
 
-    def __init__(self, use_cfg=True, article_path='', citation_path=''):
+    def __init__(self, use_cfg=True, article_path='', citation_path='', neighbor_path=''):
         if use_cfg:
             with open('config/preprocessor.cfg') as cfg:
                 self.citation_path = cfg.readline().strip(' \n')
                 self.article_path = cfg.readline().strip(' \n')
+                self.neighbor_path = cfg.readline().strip(' \n')
             self._load_citations()
         else:
             self.citation_path = citation_path
             self.article_path = article_path
+            self.neighbor_path = neighbor_path
             self._load_citations()
 
     def _load_citations(self):
@@ -59,7 +61,8 @@ class TextPreprocessor():
             'title': Title of the paper.
         """
         with open(self.citation_path, 'r') as f, \
-                open(self.article_path, 'r') as f2:
+                open(self.article_path, 'r') as f2, \
+                open(self.neighbor_path, 'r') as f3:
             while True:
                 article_info = f.readline().strip(' \n').split('|')
                 # Read the citations for a given pmid, and store into dict.
@@ -78,6 +81,7 @@ class TextPreprocessor():
                                     'Expected article metadata with citation'
                                     'count or newline character.')
 
+            # Add the original article information
             for article in self.grouper(f2, 3):  # Citations are grouped in 3
                 self._add_article(article)
 
