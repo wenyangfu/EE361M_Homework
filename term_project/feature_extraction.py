@@ -62,6 +62,15 @@ def neighboring_features(articles, article_neighbors, term):
     return count, total_score
 
 
+def citation_count(articles, article_citations, term):
+    count = 0
+
+    for citation in article_citations:
+        if term in articles[citation]['mesh']:
+            count += 1
+
+    return count
+
 def get_tf_idf_model(citations=None):
     if citations is None:
         citations = TextPreprocessor()
@@ -109,6 +118,9 @@ if __name__ == '__main__':
         for pmid, _ in attributes["neighbors"]:
             if pmid in citations:
                 candidate_terms.extend(citations[pmid]["mesh"])
+        for pmid in attributes['cites']:
+            if pmid in citations:
+                candidate_terms.extend(citations[pmid]['mesh'])
 
         # We don't want duplicate terms
         candidate_terms = set(candidate_terms)
@@ -121,8 +133,9 @@ if __name__ == '__main__':
             features = dict()
             features['unigram'] = unigram_overlap(attributes["title"], term)
             features['bigram'] = bigram_overlap(attributes["title"], attributes["abstract"], term)
-            neighbor_freq, neighbor_score = neighboring_features(citations, attributes["neighbors"], term)
+            features['citation_frequency'] = citation_count(citations, attributes['cites'], term)
 
+            neighbor_freq, neighbor_score = neighboring_features(citations, attributes["neighbors"], term)
             features['neighbor_frequency'] = neighbor_freq
             features['neighbor_score'] = neighbor_score
 
