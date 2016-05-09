@@ -140,9 +140,9 @@ def get_tf_idf_model(citations=None):
 
     return citations, bigram_vectorizer, tfidf
 
-def get_most_similar_documents(tfdif_matrix, vectorizer, query):
+def get_most_similar_documents(tfidf_matrix, vectorizer, query):
     query_tfidf = TfidfTransformer().fit_transform(vectorizer.transform([query]))
-    document_similarities = linear_kernel(query_tfidf, tfdif_matrix).flatten()
+    document_similarities = linear_kernel(query_tfidf, tfidf_matrix).flatten()
     return document_similarities.argsort()[::-1]
 
 
