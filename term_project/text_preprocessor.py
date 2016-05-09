@@ -89,7 +89,21 @@ class TextPreprocessor(UserDict):
             for article in self.grouper(f2, 3):  # Citations are grouped in 3
                 self._add_article(article)
 
+            # Add all neighboring articles
             self._add_neighbor_articles(f3)
+            
+        # Link up neighboring articles and the top level articles
+        with open("paperdat/SMALL200/S200_50neighbors.score", 'r') as f:
+            for line in f:
+                pmid, neighbor, score = line.split()
+                pmid = int(pmid)
+                neighbor = int(neighbor)
+                score = float(score)
+
+                if 'neighbors' not in self.citations[pmid]:
+                    self.citations[pmid]['neighbors'] = []
+
+                self.citations[pmid]['neighbors'].append((neighbor, score))
 
     def preprocess(self):
         """ Apply all steps of the preprocessing pipeline. """
@@ -103,7 +117,8 @@ class TextPreprocessor(UserDict):
             k: {'cites': v['cites'],
                 'title': self._tokenize(v['title']),
                 'abstract': self._tokenize(v['abstract']),
-                'mesh': v['mesh']
+                'mesh': v['mesh'],
+                'neighbors': v['neighbors']
                 } for k, v in self.citations.items()
         }
 
@@ -181,7 +196,8 @@ class TextPreprocessor(UserDict):
             if cite_pmid not in self.citations:  # Add a new citation.
                 self.citations[cite_pmid] = {
                     'title': title, 'abstract': abstract,
-                    'mesh': list(mesh_terms), 'cites': []
+                    'mesh': list(mesh_terms), 'cites': [],
+                    'neighbors': []
                 }
             else:  # top-level paper is cited by another top-level paper
                 self.citations[cite_pmid]['title'] = title
@@ -201,7 +217,6 @@ class TextPreprocessor(UserDict):
         # Had I only indexed into 2, then they would've all been str objs.
         title, abstract, mesh = [data.strip(' \n').split('|')[2:]
                                  for data in article]
-
 
         mesh_terms = { 
             m.partition('!')[0].lower().strip().rstrip('*') 
@@ -225,7 +240,8 @@ class TextPreprocessor(UserDict):
             if pmid not in self.citations:
                 self.citations[pmid] = {
                     'title': '', 'abstract': '',
-                    'mesh': [], 'cites': []
+                    'mesh': [], 'cites': [],
+                    'neighbors': []
                 }
 
             if typ == 't':
@@ -246,7 +262,7 @@ class TextPreprocessor(UserDict):
     def test_output(self):
         first_key = list(self.citations.keys())[32]
         print(self.citations[first_key])
-
+        print(self.citations[15545608])
 
 def main():
     proc = TextPreprocessor()
