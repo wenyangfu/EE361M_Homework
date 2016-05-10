@@ -1,3 +1,5 @@
+import numpy as np
+
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.metrics.pairwise import linear_kernel
 
@@ -8,12 +10,17 @@ def unigram_overlap(citations, pmid, mesh_term):
     title of an article and a MeSH term.
 
     Assumes article_title and term are strings. '''
+    
+    words = mesh_term.split()
+    overlap = 0
 
-    unigram_vectorizer = CountVectorizer(ngram_range=(1,1))
-    unigram_vectorizer.fit_transform(mesh_term)
+    article_title = citations[pmid]['title']
 
-    title = citations[pmid]['title']
-    return unigram_vectorizer.transform([title]).sum(1)
+    for word in words:
+        if word in article_title:
+            overlap += 1
+
+    return overlap
 
 def bigram_overlap(citations, pmid, mesh_term):
     ''' Returns the number of bigrams that overlap between the
@@ -21,14 +28,23 @@ def bigram_overlap(citations, pmid, mesh_term):
 
     Assumes article_title, article_abstract, and term are all strings. '''
 
-    bigram_vectorizer = CountVectorizer(ngram_range=(1,1))
-    bigram_vectorizer.fit_transform(mesh_term)
+    words = mesh_term.split()
+    bigrams = zip(words, words[1:])
+    overlap = 0
 
-    title = citations[pmid]['title']
-    abstract = citations[pmid]['abstract']
-    text = "%s %s" % (title, abstract)
+    article_title = citations[pmid]['title']
+    article_abstract = citations[pmid]['abstract']
 
-    return bigram_vectorizer.transform([text]).sum(1)
+    for bigram in bigrams:
+        gram = bigram[0] + " " + bigram[1]
+
+        if gram in article_title:
+            overlap += 1
+
+        if gram in article_abstract:
+            overlap += 1
+
+    return overlap
 
 def neighboring_features(articles, article_neighbors, term):
     ''' Returns two features. The first is the count of how many times
@@ -92,20 +108,23 @@ if __name__ == '__main__':
     citations = TextPreprocessor()
     citations.preprocess()
 
-    c, v, t = get_tf_idf_model(citations)
-    r = get_most_similar_documents(t, v, 'williams syndrome')
-    import ipdb; ipdb.set_trace()
+    # c, v, t = get_tf_idf_model(citations)
+    # r = get_most_similar_documents(t, v, 'williams syndrome')
+    # import ipdb; ipdb.set_trace()
     
-    from pprint import pprint
-    for index in r[:10]:
-        pprint(c[index]['title'])
+    # from pprint import pprint
+    # for index in r[:10]:
+    #     pprint(c[index]['title'])
 
+    print(len(citations))
     input("Hit enter to continue...")
 
     count = 0
+    skipped_count = 0
     for article, attributes in citations.items():
         # Skip neighboring articles
         if len(attributes['neighbors']) == 0:
+            skipped_count += 1
             continue
 
         # Find candidate terms (neighboring articles)
@@ -126,9 +145,8 @@ if __name__ == '__main__':
         count += 1
         for term in candidate_terms:
             features = dict()
-            features['unigram'] = unigram_overlap(attributes["title"], term)
-            features['bigram'] = bigram_overlap(
-                attributes["title"], attributes["abstract"], term)
+            features['unigram'] = unigram_overlap(citations, article, term)
+            features['bigram'] = bigram_overlap(citations, article, term)
             features['citation_frequency'] = citation_count(
                 citations, attributes['cites'], term)
 
@@ -141,3 +159,4 @@ if __name__ == '__main__':
         print("\n")
 
     print('Count: {}'.format(count))
+    print('Skipped Count: {}'.format(skipped_count))
