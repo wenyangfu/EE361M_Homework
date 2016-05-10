@@ -8,10 +8,13 @@ import re
 from itertools import islice
 from itertools import zip_longest
 from collections import UserDict
+# from collections import defaultdict
+# from collections import OrderedDict
 # Third party modules
 """ README: You must install the NLTK Corpus before this script can be run!!!
 You can find instructions here: http://www.nltk.org/data.html """
 from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 
 
 # The format of citations.TiAbMe looks like this:
@@ -33,6 +36,8 @@ class TextPreprocessor(UserDict):
 
     articles = []
 
+    pmid_to_index = {}  # Mapping of PMIDs to index of word vector matrices
+
     data = citations
 
     cached_stopwords = stopwords.words("English")
@@ -48,13 +53,15 @@ class TextPreprocessor(UserDict):
                 self.article_path = cfg.readline().strip(' \n')
                 self.neighbor_path = cfg.readline().strip(' \n')
                 self.neighbor_score_path = cfg.readline().strip(' \n')
-            self._load_citations()
         else:
             self.citation_path = citation_path
             self.article_path = article_path
             self.neighbor_path = neighbor_path
             self.neighbor_score_path = neighbor_score_path
-            self._load_citations()
+        self._load_citations()
+        self._preprocess()
+        self._build_tf_idf_model()
+        self._map_pmid_to_indices()
 
     def _load_citations(self):
         """
@@ -114,7 +121,7 @@ class TextPreprocessor(UserDict):
 
                 self.citations[pmid]['neighbors'].append((neighbor, score))
 
-    def preprocess(self):
+    def _preprocess(self):
         """ Apply all steps of the preprocessing pipeline. """
         self.regularize()
         self.tokenize()
@@ -273,6 +280,29 @@ class TextPreprocessor(UserDict):
                 raise Exception(
                     'Unknown article information found when parsing neighbors.')
 
+    def _build_tf_idf_model(self):
+        ''' Extract tf-idf vectors for every article. '''
+        import ipdb; ipdb.set_trace()
+        documents = [
+            citation['title'] + ' \n' + citation['abstract']
+            for citation in list(self.data.values())
+        ]
+
+        bigram_vectorizer = CountVectorizer(ngram_range=(1, 2))
+        bigrams = bigram_vectorizer.fit_transform(documents)
+
+        tfidf = TfidfTransformer().fit_transform(bigrams)
+
+        self.bigram_vectorizer = bigram_vectorizer
+        self.tfidf_matrix = tfidf
+
+    def _map_pmid_to_indices(self):
+        """ Create a one-to-one mapping between the PMID of an article
+            and its index in the vectorized matrix of articles.
+        """
+        self.pmid_to_index = {
+            key: idx for idx, key in enumerate(self.citations.keys())}
+
     def test_output(self):
         first_key = list(self.citations.keys())[32]
         print(self.citations[first_key])
@@ -282,8 +312,8 @@ class TextPreprocessor(UserDict):
 def main():
     proc = TextPreprocessor()
     proc.test_output()
-    proc.preprocess()
-    proc.test_output()
+    # proc.preprocess()
+    # proc.test_output()
 
 if __name__ == '__main__':
     main()
