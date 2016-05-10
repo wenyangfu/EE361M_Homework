@@ -31,23 +31,29 @@ class TextPreprocessor(UserDict):
     # and mesh is the MeSH terms for an article.
     citations = {}
 
+    articles = []
+
     data = citations
 
     cached_stopwords = stopwords.words("English")
     # punctuation and numbers to be removed
     punctuation = re.compile(r'[-.?!,":;()|0-9]')
 
-    def __init__(self, use_cfg=True, article_path='', citation_path='', neighbor_path=''):
+    def __init__(self, use_cfg=True, article_path='',
+                 citation_path='', neighbor_path='',
+                 neighbor_score_path=''):
         if use_cfg:
             with open('config/preprocessor.cfg') as cfg:
                 self.citation_path = cfg.readline().strip(' \n')
                 self.article_path = cfg.readline().strip(' \n')
                 self.neighbor_path = cfg.readline().strip(' \n')
+                self.neighbor_score_path = cfg.readline().strip(' \n')
             self._load_citations()
         else:
             self.citation_path = citation_path
             self.article_path = article_path
             self.neighbor_path = neighbor_path
+            self.neighbor_score_path = neighbor_score_path
             self._load_citations()
 
     def _load_citations(self):
@@ -63,10 +69,14 @@ class TextPreprocessor(UserDict):
             'cites' (list): pubmed IDs that an article cites.
             'mesh' (list): the mesh terms of a paper.
             'title': Title of the paper.
+            'neighbors': A list of tuples containing
+                        (neighbor_id, similarity score)
         """
         with open(self.citation_path, 'r') as f, \
                 open(self.article_path, 'r') as f2, \
-                open(self.neighbor_path, 'r') as f3:
+                open(self.neighbor_path, 'r') as f3, \
+                open(self.neighbor_score_path, 'r') as f4:
+
             while True:
                 article_info = f.readline().strip(' \n').split('|')
                 # Read the citations for a given pmid, and store into dict.
@@ -91,10 +101,9 @@ class TextPreprocessor(UserDict):
 
             # Add all neighboring articles
             self._add_neighbor_articles(f3)
-            
-        # Link up neighboring articles and the top level articles
-        with open("paperdat/SMALL200/S200_50neighbors.score", 'r') as f:
-            for line in f:
+
+            # Link up neighboring articles and the top level articles
+            for line in f4:
                 pmid, neighbor, score = line.split()
                 pmid = int(pmid)
                 neighbor = int(neighbor)
@@ -183,10 +192,10 @@ class TextPreprocessor(UserDict):
 
             _, abstract, title, mesh = [data.strip(' \n').split('|')[2:]
                                         for data in citation]
-            mesh_terms = { 
-                m.partition('!')[0].lower().strip().rstrip('*') 
-                for m in mesh 
-            } - { '' } # Remove empty term
+            mesh_terms = {
+                m.partition('!')[0].lower().strip().rstrip('*')
+                for m in mesh
+            } - {''}  # Remove empty term
 
             # Note: The 2: slicing makes title, abstract, and mesh list objects
             # Had I only indexed into 2, then they would've all been str objs.
@@ -218,11 +227,14 @@ class TextPreprocessor(UserDict):
         title, abstract, mesh = [data.strip(' \n').split('|')[2:]
                                  for data in article]
 
-        mesh_terms = { 
-            m.partition('!')[0].lower().strip().rstrip('*') 
-            for m in mesh 
-        } - { '' } # Remove empty term
+        mesh_terms = {
+            m.partition('!')[0].lower().strip().rstrip('*')
+            for m in mesh
+        } - {''}  # Remove empty term
 
+        # PMIDs of articles we're trying to predict MeSH terms for
+        self.articles.append(pmid)
+        # Title/abstract/MeSH terms of a cited article
         self.citations[pmid]['title'] = ''.join(title)
         self.citations[pmid]['abstract'] = ''.join(abstract)
         self.citations[pmid]['mesh'] = list(mesh_terms)
@@ -230,7 +242,8 @@ class TextPreprocessor(UserDict):
     def _add_neighbor_articles(self, f):
         """ Insert neighbor article metadata into citations dictionary. """
         # Since not all of the neighboring documents have a title, abstract,
-        # and terms, we have to go line by line and add information as we find it.
+        # and terms, we have to go line by line and add information as we find
+        # it.
         for line in f:
             items = line.strip(' \n').split('|')
             pmid = items[0]
@@ -250,19 +263,21 @@ class TextPreprocessor(UserDict):
                 self.citations[pmid]['abstract'] = items[2]
             elif typ == 'm':
                 mesh = items[2:]
-                mesh_terms = { 
-                    m.partition('!')[0].lower().strip().rstrip('*') 
-                    for m in mesh 
-                } - { '' } # Remove empty term
+                mesh_terms = {
+                    m.partition('!')[0].lower().strip().rstrip('*')
+                    for m in mesh
+                } - {''}  # Remove empty term
 
                 self.citations[pmid]['mesh'] = list(mesh_terms)
             else:
-                raise Exception('Unknown article information found when parsing neighbors.')
+                raise Exception(
+                    'Unknown article information found when parsing neighbors.')
 
     def test_output(self):
         first_key = list(self.citations.keys())[32]
         print(self.citations[first_key])
         print(self.citations[15545608])
+
 
 def main():
     proc = TextPreprocessor()

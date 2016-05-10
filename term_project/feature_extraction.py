@@ -7,11 +7,11 @@ from text_preprocessor import TextPreprocessor
 def unigram_overlap(article_title, term):
     ''' Returns the number of unigrams that overlap between the
     title of an article and a MeSH term.
-    
+
     Assumes article_title and term are strings. '''
     words = term.split()
     overlap = 0
-    
+
     for word in words:
         if word in article_title:
             overlap += 1
@@ -22,7 +22,7 @@ def unigram_overlap(article_title, term):
 def bigram_overlap(article_title, article_abstract, term):
     ''' Returns the number of bigrams that overlap between the
     title and abstract of an article and a MeSH term.
-    
+
     Assumes article_title, article_abstract, and term are all strings. '''
     words = term.split()
     bigrams = zip(words, words[1:])
@@ -30,7 +30,7 @@ def bigram_overlap(article_title, article_abstract, term):
 
     for bigram in bigrams:
         gram = bigram[0] + " " + bigram[1]
-        
+
         if gram in article_title:
             overlap += 1
 
@@ -46,8 +46,8 @@ def neighboring_features(articles, article_neighbors, term):
     second is the total neighborosity score of each article_neighbors that
     the term appears in.
 
-    Assumes articles is the main dict, article_neighbors are a tuple of (pmid, score),
-    and term is a string. '''
+    Assumes articles is the main dict, article_neighbors are
+    a tuple of (pmid, score), and term is a string. '''
     count = 0
     total_score = 0.0
 
@@ -63,6 +63,7 @@ def neighboring_features(articles, article_neighbors, term):
 
 
 def citation_count(articles, article_citations, term):
+    ''' Count the number of citations for each article. '''
     count = 0
 
     for citation in article_citations:
@@ -71,24 +72,27 @@ def citation_count(articles, article_citations, term):
 
     return count
 
+
 def get_tf_idf_model(citations=None):
     if citations is None:
         citations = TextPreprocessor()
         citations.preprocess()
-    
+
     documents = [
         citation['title'] + ' \n' + citation['abstract']
-        for citation in list(citations.values())
+        for citation in list(citations.articles)
     ]
-    bigram_vectorizer = CountVectorizer(ngram_range=(1,2))
+    bigram_vectorizer = CountVectorizer(ngram_range=(1, 2))
     bigrams = bigram_vectorizer.fit_transform(documents)
 
     tfidf = TfidfTransformer().fit_transform(bigrams)
 
     return citations, bigram_vectorizer, tfidf
 
+
 def get_most_similar_documents(tfidf_matrix, vectorizer, query):
-    query_tfidf = TfidfTransformer().fit_transform(vectorizer.transform([query]))
+    query_tfidf = TfidfTransformer().fit_transform(
+        vectorizer.transform([query]))
     document_similarities = linear_kernel(query_tfidf, tfidf_matrix).flatten()
     return document_similarities.argsort()[::-1]
 
@@ -110,7 +114,7 @@ if __name__ == '__main__':
     count = 0
     for article, attributes in citations.items():
         # Skip neighboring articles
-        if len(attributes['neighbors']) == 0:    
+        if len(attributes['neighbors']) == 0:
             continue
 
         # Find candidate terms (neighboring articles)
@@ -132,10 +136,13 @@ if __name__ == '__main__':
         for term in candidate_terms:
             features = dict()
             features['unigram'] = unigram_overlap(attributes["title"], term)
-            features['bigram'] = bigram_overlap(attributes["title"], attributes["abstract"], term)
-            features['citation_frequency'] = citation_count(citations, attributes['cites'], term)
+            features['bigram'] = bigram_overlap(
+                attributes["title"], attributes["abstract"], term)
+            features['citation_frequency'] = citation_count(
+                citations, attributes['cites'], term)
 
-            neighbor_freq, neighbor_score = neighboring_features(citations, attributes["neighbors"], term)
+            neighbor_freq, neighbor_score = neighboring_features(
+                citations, attributes["neighbors"], term)
             features['neighbor_frequency'] = neighbor_freq
             features['neighbor_score'] = neighbor_score
 
