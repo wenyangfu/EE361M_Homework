@@ -1,16 +1,20 @@
+import numpy as np
+
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.metrics.pairwise import linear_kernel
 
 from text_preprocessor import TextPreprocessor
 
-
-def unigram_overlap(article_title, term):
+def unigram_overlap(citations, pmid, mesh_term):
     ''' Returns the number of unigrams that overlap between the
     title of an article and a MeSH term.
 
     Assumes article_title and term are strings. '''
-    words = term.split()
+    
+    words = mesh_term.split()
     overlap = 0
+
+    article_title = citations[pmid]['title']
 
     for word in words:
         if word in article_title:
@@ -18,15 +22,18 @@ def unigram_overlap(article_title, term):
 
     return overlap
 
-
-def bigram_overlap(article_title, article_abstract, term):
+def bigram_overlap(citations, pmid, mesh_term):
     ''' Returns the number of bigrams that overlap between the
     title and abstract of an article and a MeSH term.
 
     Assumes article_title, article_abstract, and term are all strings. '''
-    words = term.split()
+
+    words = mesh_term.split()
     bigrams = zip(words, words[1:])
     overlap = 0
+
+    article_title = citations[pmid]['title']
+    article_abstract = citations[pmid]['abstract']
 
     for bigram in bigrams:
         gram = bigram[0] + " " + bigram[1]
@@ -38,7 +45,6 @@ def bigram_overlap(article_title, article_abstract, term):
             overlap += 1
 
     return overlap
-
 
 def neighboring_features(articles, article_neighbors, term):
     ''' Returns two features. The first is the count of how many times
@@ -80,7 +86,7 @@ def get_tf_idf_model(citations=None):
 
     documents = [
         citation['title'] + ' \n' + citation['abstract']
-        for citation in list(citations.articles)
+        for citation in list(citations.values())
     ]
     bigram_vectorizer = CountVectorizer(ngram_range=(1, 2))
     bigrams = bigram_vectorizer.fit_transform(documents)
@@ -92,7 +98,8 @@ def get_tf_idf_model(citations=None):
 
 def get_most_similar_documents(tfidf_matrix, vectorizer, query):
     query_tfidf = TfidfTransformer().fit_transform(
-        vectorizer.transform([query]))
+        vectorizer.transform([query])
+    )
     document_similarities = linear_kernel(query_tfidf, tfidf_matrix).flatten()
     return document_similarities.argsort()[::-1]
 
@@ -101,20 +108,23 @@ if __name__ == '__main__':
     citations = TextPreprocessor()
     citations.preprocess()
 
-    c, v, t = get_tf_idf_model(citations)
-    r = get_most_similar_documents(t, v, 'williams syndrome')
+    # c, v, t = get_tf_idf_model(citations)
+    # r = get_most_similar_documents(t, v, 'williams syndrome')
+    # import ipdb; ipdb.set_trace()
+    
+    # from pprint import pprint
+    # for index in r[:10]:
+    #     pprint(c[index]['title'])
 
-    citation_values = list(c.values())
-    from pprint import pprint
-    for index in r[:10]:
-        pprint(citation_values[index]['title'])
-
+    print(len(citations))
     input("Hit enter to continue...")
 
     count = 0
+    skipped_count = 0
     for article, attributes in citations.items():
         # Skip neighboring articles
         if len(attributes['neighbors']) == 0:
+            skipped_count += 1
             continue
 
         # Find candidate terms (neighboring articles)
@@ -135,9 +145,8 @@ if __name__ == '__main__':
         count += 1
         for term in candidate_terms:
             features = dict()
-            features['unigram'] = unigram_overlap(attributes["title"], term)
-            features['bigram'] = bigram_overlap(
-                attributes["title"], attributes["abstract"], term)
+            features['unigram'] = unigram_overlap(citations, article, term)
+            features['bigram'] = bigram_overlap(citations, article, term)
             features['citation_frequency'] = citation_count(
                 citations, attributes['cites'], term)
 
@@ -150,3 +159,4 @@ if __name__ == '__main__':
         print("\n")
 
     print('Count: {}'.format(count))
+    print('Skipped Count: {}'.format(skipped_count))
