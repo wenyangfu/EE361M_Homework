@@ -46,37 +46,57 @@ def bigram_overlap(citations, pmid, mesh_term):
 
     return overlap
 
-def neighboring_features(articles, article_neighbors, term):
-    ''' Returns two features. The first is the count of how many times
-    the given MeSH term appears as a term in the article_neighbors. The
-    second is the total neighborosity score of each article_neighbors that
-    the term appears in.
-
-    Assumes articles is the main dict, article_neighbors are
-    a tuple of (pmid, score), and term is a string. '''
-    count = 0
+def neigboring_similarities(citations, pmid, mesh_term):
+    '''Returns total neighborosity score of each article_neighbors that the term appears in.'''
     total_score = 0.0
 
+    article_neighbors = citations[pmid]['neighbors']
+
     for neighbor, score in article_neighbors:
-        if neighbor not in articles:
+        if neighbor not in citations:
             continue
 
-        if term in articles[neighbor]["mesh"]:
-            count += 1
+        if mesh_term in citations[neighbor]["mesh"]:
             total_score += float(score)
 
-    return count, total_score
+    return total_score
 
-
-def citation_count(articles, article_citations, term):
-    ''' Count the number of citations for each article. '''
+def neighboring_count(citations, pmid, mesh_term):
+    ''' Return the count of how many times the given MeSH term appears in neighbors '''
     count = 0
 
-    for citation in article_citations:
-        if term in articles[citation]['mesh']:
+    article_neighbors = citations[pmid]['neighbors']
+
+    for neighbor, score in article_neighbors:
+        if neighbor not in citations:
+            continue
+
+        if mesh_term in citations[neighbor]["mesh"]:
             count += 1
 
     return count
+
+
+def citation_count(citations, pmid, mesh_term):
+    ''' Count the number of citations for each article. '''
+    count = 0
+    
+    article_citations = citations[pmid]['cites'] 
+
+    for citation in article_citations:
+        if mesh_term in citations[citation]['mesh']:
+            count += 1
+
+    return count
+
+
+features = {
+    'bigram_overlap' : bigram_overlap,
+    'citation_count': citation_count,
+    'neighboring_count' : neighboring_count,
+    'unigram_overlap' : unigram_overlap,
+    'neighboring_similiarities' : neigboring_similarities,
+}
 
 
 def get_tf_idf_model(citations=None):
@@ -106,17 +126,7 @@ def get_most_similar_documents(tfidf_matrix, vectorizer, query):
 
 if __name__ == '__main__':
     citations = TextPreprocessor()
-    citations.preprocess()
 
-    # c, v, t = get_tf_idf_model(citations)
-    # r = get_most_similar_documents(t, v, 'williams syndrome')
-    # import ipdb; ipdb.set_trace()
-    
-    # from pprint import pprint
-    # for index in r[:10]:
-    #     pprint(c[index]['title'])
-
-    print(len(citations))
     input("Hit enter to continue...")
 
     count = 0
@@ -127,17 +137,7 @@ if __name__ == '__main__':
             skipped_count += 1
             continue
 
-        # Find candidate terms (neighboring articles)
-        candidate_terms = []
-        for pmid, _ in attributes["neighbors"]:
-            if pmid in citations:
-                candidate_terms.extend(citations[pmid]["mesh"])
-        for pmid in attributes['cites']:
-            if pmid in citations:
-                candidate_terms.extend(citations[pmid]['mesh'])
-
-        # We don't want duplicate terms
-        candidate_terms = set(candidate_terms)
+        candidate_terms = get_candidates(citations, article)
 
         # Make features
         # Just printing them for now
@@ -150,8 +150,6 @@ if __name__ == '__main__':
             features['citation_frequency'] = citation_count(
                 citations, attributes['cites'], term)
 
-            neighbor_freq, neighbor_score = neighboring_features(
-                citations, attributes["neighbors"], term)
             features['neighbor_frequency'] = neighbor_freq
             features['neighbor_score'] = neighbor_score
 
