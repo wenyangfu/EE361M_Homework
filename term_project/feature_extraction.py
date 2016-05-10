@@ -3,42 +3,32 @@ from sklearn.metrics.pairwise import linear_kernel
 
 from text_preprocessor import TextPreprocessor
 
-
-def unigram_overlap(article_title, term):
+def unigram_overlap(citations, pmid, mesh_term):
     ''' Returns the number of unigrams that overlap between the
     title of an article and a MeSH term.
 
     Assumes article_title and term are strings. '''
-    words = term.split()
-    overlap = 0
 
-    for word in words:
-        if word in article_title:
-            overlap += 1
+    unigram_vectorizer = CountVectorizer(ngram_range=(1,1))
+    unigram_vectorizer.fit_transform(mesh_term)
 
-    return overlap
+    title = citations[pmid]['title']
+    return unigram_vectorizer.transform([title]).sum(1)
 
-
-def bigram_overlap(article_title, article_abstract, term):
+def bigram_overlap(citations, pmid, mesh_term):
     ''' Returns the number of bigrams that overlap between the
     title and abstract of an article and a MeSH term.
 
     Assumes article_title, article_abstract, and term are all strings. '''
-    words = term.split()
-    bigrams = zip(words, words[1:])
-    overlap = 0
 
-    for bigram in bigrams:
-        gram = bigram[0] + " " + bigram[1]
+    bigram_vectorizer = CountVectorizer(ngram_range=(1,1))
+    bigram_vectorizer.fit_transform(mesh_term)
 
-        if gram in article_title:
-            overlap += 1
+    title = citations[pmid]['title']
+    abstract = citations[pmid]['abstract']
+    text = "%s %s" % (title, abstract)
 
-        if gram in article_abstract:
-            overlap += 1
-
-    return overlap
-
+    return bigram_vectorizer.transform([text]).sum(1)
 
 def neighboring_features(articles, article_neighbors, term):
     ''' Returns two features. The first is the count of how many times
@@ -80,7 +70,7 @@ def get_tf_idf_model(citations=None):
 
     documents = [
         citation['title'] + ' \n' + citation['abstract']
-        for citation in list(citations.articles)
+        for citation in list(citations.values())
     ]
     bigram_vectorizer = CountVectorizer(ngram_range=(1, 2))
     bigrams = bigram_vectorizer.fit_transform(documents)
@@ -92,7 +82,8 @@ def get_tf_idf_model(citations=None):
 
 def get_most_similar_documents(tfidf_matrix, vectorizer, query):
     query_tfidf = TfidfTransformer().fit_transform(
-        vectorizer.transform([query]))
+        vectorizer.transform([query])
+    )
     document_similarities = linear_kernel(query_tfidf, tfidf_matrix).flatten()
     return document_similarities.argsort()[::-1]
 
@@ -103,11 +94,11 @@ if __name__ == '__main__':
 
     c, v, t = get_tf_idf_model(citations)
     r = get_most_similar_documents(t, v, 'williams syndrome')
-
-    citation_values = list(c.values())
+    import ipdb; ipdb.set_trace()
+    
     from pprint import pprint
     for index in r[:10]:
-        pprint(citation_values[index]['title'])
+        pprint(c[index]['title'])
 
     input("Hit enter to continue...")
 
