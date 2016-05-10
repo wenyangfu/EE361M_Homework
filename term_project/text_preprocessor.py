@@ -5,16 +5,18 @@ in addition to their citations that can be found on PubMed central.
 
 # Built-in python modules
 import re
+import logging
 from itertools import islice
 from itertools import zip_longest
 from collections import UserDict
-# from collections import defaultdict
+from collections import defaultdict
 # from collections import OrderedDict
 # Third party modules
 """ README: You must install the NLTK Corpus before this script can be run!!!
 You can find instructions here: http://www.nltk.org/data.html """
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.metrics.pairwise import linear_kernel
 
 
 # The format of citations.TiAbMe looks like this:
@@ -47,6 +49,7 @@ class TextPreprocessor(UserDict):
     def __init__(self, use_cfg=True, article_path='',
                  citation_path='', neighbor_path='',
                  neighbor_score_path=''):
+        logging.debug('Initialization stage')
         if use_cfg:
             with open('config/preprocessor.cfg') as cfg:
                 self.citation_path = cfg.readline().strip(' \n')
@@ -62,6 +65,7 @@ class TextPreprocessor(UserDict):
         self._preprocess()
         self._build_tf_idf_model()
         self._map_pmid_to_indices()
+        self._compute_similarities()
 
     def _load_citations(self):
         """
@@ -79,11 +83,13 @@ class TextPreprocessor(UserDict):
             'neighbors': A list of tuples containing
                         (neighbor_id, similarity score)
         """
+        logging.debug('Loading citations')
         with open(self.citation_path, 'r') as f, \
                 open(self.article_path, 'r') as f2, \
                 open(self.neighbor_path, 'r') as f3, \
                 open(self.neighbor_score_path, 'r') as f4:
 
+            logging.debug('Reading citations')
             while True:
                 article_info = f.readline().strip(' \n').split('|')
                 # Read the citations for a given pmid, and store into dict.
@@ -102,13 +108,16 @@ class TextPreprocessor(UserDict):
                                     'Expected article metadata with citation'
                                     'count or newline character.')
 
+            logging.debug('Reading articles we want to predict terms for')
             # Add the original article information
             for article in self.grouper(f2, 3):  # Citations are grouped in 3
                 self._add_article(article)
 
+            logging.debug('Reading neighbor articles')
             # Add all neighboring articles
             self._add_neighbor_articles(f3)
 
+            logging.debug('Reading neighbor article scores')
             # Link up neighboring articles and the top level articles
             for line in f4:
                 pmid, neighbor, score = line.split()
@@ -123,6 +132,7 @@ class TextPreprocessor(UserDict):
 
     def _preprocess(self):
         """ Apply all steps of the preprocessing pipeline. """
+        logging.debug('Preprocessing Stage')
         self.regularize()
         self.tokenize()
 
@@ -278,11 +288,11 @@ class TextPreprocessor(UserDict):
                 self.citations[pmid]['mesh'] = list(mesh_terms)
             else:
                 raise Exception(
-                    'Unknown article information found when parsing neighbors.')
+                    'Unknown article info found when parsing neighbors.')
 
     def _build_tf_idf_model(self):
         ''' Extract tf-idf vectors for every article. '''
-        import ipdb; ipdb.set_trace()
+        logging.debug('Building tf-idf vectors for each article')
         documents = [
             citation['title'] + ' \n' + citation['abstract']
             for citation in list(self.data.values())
@@ -301,7 +311,38 @@ class TextPreprocessor(UserDict):
             and its index in the vectorized matrix of articles.
         """
         self.pmid_to_index = {
-            key: idx for idx, key in enumerate(self.citations.keys())}
+            key: idx for idx, key in enumerate(self.citations.keys())
+        }
+
+    def _compute_similarities(self):
+        """ Compute the cosine similarities between each
+        article and its citations. Stores a dictionary
+        of the form pmid: citation_pmid : similarity_score"""
+        logging.debug('Compute cosine similarities b/w articles and citations')
+        self.citation_similarities = defaultdict(lambda: defaultdict(float))
+
+        for pmid in self.articles:
+            article_idx = self.pmid_to_index[pmid]
+            citation_ids = self.citations[pmid]['cites']
+            cited_indices = [self.pmid_to_index[cited_pmid]
+                             for cited_pmid in citation_ids]
+            similarity_scores = [self._pairwise_similarity(article_idx, c_idx)
+                                 for c_idx in cited_indices]
+            self.citation_similarities[pmid] = {
+                cited_pmid: score
+                for cited_pmid, score in zip(citation_ids, similarity_scores)
+            }
+
+    def _pairwise_similarity(self, idx1, idx2):
+        ''' Compute the pairwise similarity between two documents,
+        based on their vectorized title and abstract. '''
+        tfidf = self.tfidf_matrix
+        # query_tfidf = TfidfTransformer().fit_transform(
+        #     vectorizer.transform([query])
+        # )
+        similarity_score = linear_kernel(
+            tfidf[idx1], tfidf[idx2]).flatten()[0]
+        return similarity_score
 
     def test_output(self):
         first_key = list(self.citations.keys())[32]
