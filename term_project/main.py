@@ -22,10 +22,18 @@ def get_candidates(citations, pmid):
 
     return candidate_terms
 
+def engineer_features(citations, pmid):
+    data = {}
+    for candidate in candidates:
+        data[candidate] = {
+            name: func(citations, pmid, candidate)
+            for name, func in mesh_features.items()
+        }
+    return data
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Ranker for MeSH terms')
 
-    parser.add_argument('pmid', type=int)
     parser.add_argument('--citations-file', '-c', type=str, default='')
     parser.add_argument('--num-mesh-terms', '-k', type=int)
     parser.add_argument('-v', '--verbosity', action='count', default=0)
@@ -45,7 +53,6 @@ if __name__ == "__main__":
         level=level,
     )
 
-    logging.info('Ranking MeSH terms for %s' % args.pmid)
 
     logging.info('Loading dataset')
     if args.citations_file:
@@ -60,19 +67,9 @@ if __name__ == "__main__":
         citations = TextPreprocessor()
 
 
-    logging.info('Getting candidate MeSH terms')
-    candidates = get_candidates(citations, args.pmid)
-    
-    data = {}
-    logging.info('Building features for each MeSH term')
-    for candidate in candidates:
-        data[candidate] = {
-            name: func(citations, args.pmid, candidate)
-            for name, func in mesh_features.items()
-        }
-
-    import pprint;
-    pprint.pprint(data)
-
-    
-    
+    for pmid in citations.articles:
+        logging.debug('Ranking MeSH terms for %s' % pmid)
+        candidates = get_candidates(citations, pmid)
+        logging.debug('Building features for %d' % pmid)
+        candidates = get_candidates(citations, pmid)
+        features = engineer_features(citations, pmid) 
