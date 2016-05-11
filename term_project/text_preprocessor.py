@@ -78,10 +78,12 @@ class TextPreprocessor(UserDict):
         and the values within this dict will be:
             'abstract' (str): the abstract of the paper.
             'cites' (list): pubmed IDs that an article cites.
-            'mesh' (list): the mesh terms of a paper.
-            'title': Title of the paper.
-            'neighbors': A list of tuples containing
+            'mesh' (set): the mesh terms of a paper.
+            'title' (str): Title of the paper.
+            'neighbors' : A list of tuples containing
                         (neighbor_id, similarity score)
+        If the preprocessing function is called, 'abstract' and 'title'
+        becomes list(str)
         """
         logging.debug('Loading citations')
         with open(self.citation_path, 'r') as f, \
@@ -222,13 +224,13 @@ class TextPreprocessor(UserDict):
             if cite_pmid not in self.citations:  # Add a new citation.
                 self.citations[cite_pmid] = {
                     'title': title, 'abstract': abstract,
-                    'mesh': list(mesh_terms), 'cites': [],
+                    'mesh': mesh_terms, 'cites': [],
                     'neighbors': []
                 }
             else:  # top-level paper is cited by another top-level paper
                 self.citations[cite_pmid]['title'] = title
                 self.citations[cite_pmid]['abstract'] = abstract
-                self.citations[cite_pmid]['mesh'] = list(mesh_terms)
+                self.citations[cite_pmid]['mesh'] = mesh_terms
 
         # Connect a top-level paper to its citations.
         if pmid not in self.citations:
@@ -254,7 +256,7 @@ class TextPreprocessor(UserDict):
         # Title/abstract/MeSH terms of a cited article
         self.citations[pmid]['title'] = ''.join(title)
         self.citations[pmid]['abstract'] = ''.join(abstract)
-        self.citations[pmid]['mesh'] = list(mesh_terms)
+        self.citations[pmid]['mesh'] = mesh_terms
 
     def _add_neighbor_articles(self, f):
         """ Insert neighbor article metadata into citations dictionary. """
@@ -285,7 +287,7 @@ class TextPreprocessor(UserDict):
                     for m in mesh
                 } - {''}  # Remove empty term
 
-                self.citations[pmid]['mesh'] = list(mesh_terms)
+                self.citations[pmid]['mesh'] = mesh_terms
             else:
                 raise Exception(
                     'Unknown article info found when parsing neighbors.')
@@ -319,7 +321,7 @@ class TextPreprocessor(UserDict):
         article and its citations. Stores a dictionary
         of the form pmid: citation_pmid : similarity_score"""
         logging.debug('Compute cosine similarities b/w articles and citations')
-        self.citation_similarities = defaultdict(lambda: defaultdict(float))
+        self.similarity_scores = defaultdict(lambda: defaultdict(float))
 
         for pmid in self.articles:
             article_idx = self.pmid_to_index[pmid]
@@ -328,7 +330,7 @@ class TextPreprocessor(UserDict):
                              for cited_pmid in citation_ids]
             similarity_scores = [self._pairwise_similarity(article_idx, c_idx)
                                  for c_idx in cited_indices]
-            self.citation_similarities[pmid] = {
+            self.similarity_scores[pmid] = {
                 cited_pmid: score
                 for cited_pmid, score in zip(citation_ids, similarity_scores)
             }
