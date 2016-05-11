@@ -46,6 +46,16 @@ def bigram_overlap(citations, pmid, mesh_term):
 
     return overlap
 
+def citation_similarities(citations, pmid, mesh_term):
+    '''Return the sum of similarity scores between the article we're trying to predict
+    and every citation that contains this MeSH term. '''
+    total_score = 0.0
+
+    for cite_pmid in citations[pmid]['cites']:
+        if mesh_term in citations[cite_pmid]['mesh']:
+            total_score += citations.similarity_scores[pmid][cite_pmid]
+
+
 def neigboring_similarities(citations, pmid, mesh_term):
     '''Returns total neighborosity score of each article_neighbors that the term appears in.'''
     total_score = 0.0
@@ -96,6 +106,7 @@ features = {
     'neighboring_count' : neighboring_count,
     'unigram_overlap' : unigram_overlap,
     'neighboring_similiarities' : neigboring_similarities,
+    'citation_similarities' : citation_similarities
 }
 
 
