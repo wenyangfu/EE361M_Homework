@@ -66,6 +66,7 @@ class TextPreprocessor(UserDict):
         self._build_tf_idf_model()
         self._map_pmid_to_indices()
         self._compute_similarities()
+        self._encode_mesh()
 
     def _load_citations(self):
         """
@@ -307,6 +308,14 @@ class TextPreprocessor(UserDict):
 
         self.bigram_vectorizer = bigram_vectorizer
         self.tfidf_matrix = tfidf
+
+    def _encode_mesh(self):
+        ''' Generate a dictionary encoding from MeSH term to integer.
+        This will be used by ListNet to rank candidate MeSH terms.'''
+        self.mesh_mapping = set()
+        for citation in self.citations.values():
+            self.mesh_mapping |= citation['mesh']
+        self.mesh_mapping = {k: v for v, k in enumerate(self.mesh_mapping)}
 
     def _map_pmid_to_indices(self):
         """ Create a one-to-one mapping between the PMID of an article
