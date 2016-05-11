@@ -273,7 +273,7 @@ class TextPreprocessor(UserDict):
             if pmid not in self.citations:
                 self.citations[pmid] = {
                     'title': '', 'abstract': '',
-                    'mesh': [], 'cites': [],
+                    'mesh': set(), 'cites': [],
                     'neighbors': []
                 }
 

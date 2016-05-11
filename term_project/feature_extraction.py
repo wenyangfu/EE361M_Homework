@@ -50,17 +50,20 @@ def bigram_overlap(citations, pmid, mesh_term):
 
 
 def citation_similarities(citations, pmid, mesh_term):
-    '''Return the sum of similarity scores between the article we're trying to predict
-    and every citation that contains this MeSH term. '''
+    '''Return the sum of similarity scores between the article we're
+    trying to predict and every citation that contains this MeSH term. '''
     total_score = 0.0
 
     for cite_pmid in citations[pmid]['cites']:
         if mesh_term in citations[cite_pmid]['mesh']:
             total_score += citations.similarity_scores[pmid][cite_pmid]
 
+    return total_score
+
 
 def neigboring_similarities(citations, pmid, mesh_term):
-    '''Returns total neighborosity score of each article_neighbors that the term appears in.'''
+    '''Returns total neighborosity score of each article_neighbors that
+    the term appears in.'''
     total_score = 0.0
 
     article_neighbors = citations[pmid]['neighbors']
@@ -76,7 +79,8 @@ def neigboring_similarities(citations, pmid, mesh_term):
 
 
 def neighboring_count(citations, pmid, mesh_term):
-    ''' Return the count of how many times the given MeSH term appears in neighbors '''
+    ''' Return the count of how many times the given MeSH term
+    appears in neighbors '''
     count = 0
 
     article_neighbors = citations[pmid]['neighbors']
@@ -111,18 +115,23 @@ def get_target(citations, pmid, mesh_term):
     return 1 if mesh_term in citations[pmid]['mesh'] else 0
 
 
-features = {
-    'bigram_overlap': bigram_overlap,
-    'citation_count': citation_count,
-    'neighboring_count': neighboring_count,
-    'unigram_overlap': unigram_overlap,
-    'neighboring_similiarities': neigboring_similarities,
-    'citation_similarities': citation_similarities
-}
+# features = {
+#     'bigram_overlap': bigram_overlap,
+#     'citation_count': citation_count,
+#     'neighboring_count': neighboring_count,
+#     'unigram_overlap': unigram_overlap,
+#     'neighboring_similiarities': neigboring_similarities,
+#     'citation_similarities': citation_similarities
+# }
 
-target = {
-    'target': get_target
-}
+features = [
+    bigram_overlap,
+    citation_count,
+    neighboring_count,
+    unigram_overlap,
+    neigboring_similarities,
+    citation_similarities
+]
 
 
 def get_tf_idf_model(citations=None):
