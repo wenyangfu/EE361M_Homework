@@ -61,7 +61,7 @@ def citation_similarities(citations, pmid, mesh_term):
     return total_score
 
 
-def neigboring_similarities(citations, pmid, mesh_term):
+def neighboring_similarities(citations, pmid, mesh_term):
     '''Returns total neighborosity score of each article_neighbors that
     the term appears in.'''
     total_score = 0.0
@@ -76,6 +76,12 @@ def neigboring_similarities(citations, pmid, mesh_term):
             total_score += float(score)
 
     return total_score
+
+
+def sum_similarities(citations, pmid, mesh_term):
+    ''' Sum the total neighborosity score and citation similarity score for
+    a candidate MeSH term. '''
+    return neighboring_similarities(citations, pmid, mesh_term) + citation_similarities(citations, pmid, mesh_term)
 
 
 def neighboring_count(citations, pmid, mesh_term):
@@ -108,6 +114,12 @@ def citation_count(citations, pmid, mesh_term):
     return count
 
 
+def sum_count(citations, pmid, mesh_term):
+    ''' Sum the times this mesh term appears in an article's
+    citations and neighbor articles.'''
+    return neighboring_count(citations, pmid, mesh_term) + citation_count(citations, pmid, mesh_term)
+
+
 def get_target(citations, pmid, mesh_term):
     ''' Returns a 0/1 (true/false) depending on whether a candidate MeSH term
     is actually contained in the article. Used by ListNET.'''
@@ -119,17 +131,19 @@ def get_target(citations, pmid, mesh_term):
 #     'citation_count': citation_count,
 #     'neighboring_count': neighboring_count,
 #     'unigram_overlap': unigram_overlap,
-#     'neighboring_similiarities': neigboring_similarities,
+#     'neighboring_similiarities': neighboring_similarities,
 #     'citation_similarities': citation_similarities
 # }
 
 features = [
     bigram_overlap,
     citation_count,
-    neighboring_count,
+    # neighboring_count,
+    # sum_count,
     unigram_overlap,
-    neigboring_similarities,
+    # neighboring_similarities,
     citation_similarities
+    # sum_similarities
 ]
 
 
