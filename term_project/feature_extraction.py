@@ -114,7 +114,6 @@ def get_target(citations, pmid, mesh_term):
 
     return 1 if mesh_term in citations[pmid]['mesh'] else 0
 
-
 # features = {
 #     'bigram_overlap': bigram_overlap,
 #     'citation_count': citation_count,

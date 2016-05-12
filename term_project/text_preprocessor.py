@@ -46,12 +46,13 @@ class TextPreprocessor(UserDict):
     # punctuation and numbers to be removed
     punctuation = re.compile(r'[-.?!,":;()|0-9]')
 
-    def __init__(self, use_cfg=True, article_path='',
+    def __init__(self, use_cfg='config/preprocessor.cfg',
+                 article_path='',
                  citation_path='', neighbor_path='',
                  neighbor_score_path=''):
         logging.debug('Initialization stage')
-        if use_cfg:
-            with open('config/preprocessor.cfg') as cfg:
+        if use_cfg is not None:
+            with open(use_cfg) as cfg:
                 self.citation_path = cfg.readline().strip(' \n')
                 self.article_path = cfg.readline().strip(' \n')
                 self.neighbor_path = cfg.readline().strip(' \n')
