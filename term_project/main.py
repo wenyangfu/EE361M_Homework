@@ -10,9 +10,26 @@ from text_preprocessor import TextPreprocessor
 from feature_extraction import features as mesh_features
 from feature_extraction import get_target
 from listnet import ListNet
+from sklearn.preprocessing import MinMaxScaler
 
 
 def get_candidates(citations, pmid):
+    # Find candidate mesh terms (neighbor/cited articles)
+    candidate_terms = set()
+
+    attributes = citations[pmid]
+
+    for pmid, _ in attributes['neighbors']:
+        if pmid in citations:
+            candidate_terms |= set(citations[pmid]["mesh"])
+
+    for pmid in attributes['cites']:
+        if pmid in citations:
+            candidate_terms |= set(citations[pmid]["mesh"])
+
+    return candidate_terms
+
+def get_neighbor_candidates(citations, pmid):
     # Find candidate mesh terms (neighboring articles)
     candidate_terms = set()
 
@@ -21,6 +38,14 @@ def get_candidates(citations, pmid):
     for pmid, _ in attributes['neighbors']:
         if pmid in citations:
             candidate_terms |= set(citations[pmid]["mesh"])
+
+    return candidate_terms
+
+def get_citation_candidates(citations, pmid):
+    # Find candidate mesh terms (cited articles)
+    candidate_terms = set()
+
+    attributes = citations[pmid]
 
     for pmid in attributes['cites']:
         if pmid in citations:
@@ -63,6 +88,12 @@ def generate_targets(citations, pmid):
     targets = np.asarray([get_target(citations, pmid, candidate)
                           for candidate in candidates])
     return targets
+
+def scale_features(features):
+    # Scale the features
+    feature_matrix = np.vstack(features)
+    min_max_scaler = MinMaxScaler()
+    return min_max_scaler.fit_transform(feature_matrix)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Ranker for MeSH terms')
@@ -126,18 +157,20 @@ if __name__ == "__main__":
                 logging.debug('Building features for %d' % pmid)
                 logging.debug(engineer_features)
                 features = engineer_features(citations, pmid)
+                # Scale the features
+                # features = scale_features(features)
                 for feature_vec in features:
                     current_features = 'qid:{} '.format(pmid)
                     current_features += ' '.join(('%s:%s' % (feat_num + 1, val) for feat_num, val in enumerate(feature_vec)))
                     f.write(current_features + '\n')
 
-                
 
-            model = LNet()
-            model.switch(50, .01)
-            logging.info("{}"
-                .format(model.get_score(citations, 9317033, 'mutation')))
-            logging.info("weights:{}".format(model.weights))
+
+            # model = LNet()
+            # model.switch(50, .01)
+            # logging.info("{}"
+            #     .format(model.get_score(citations, 9317033, 'mutation')))
+            # logging.info("weights:{}".format(model.weights))
             # Score for MeSH term {} in article{} is:\n
 
     else:
@@ -148,6 +181,10 @@ if __name__ == "__main__":
                 logging.debug('Building features for %d' % pmid)
                 logging.debug(engineer_features)
                 features = engineer_features(citations, pmid)
+
+                # Scale the features
+                # features = scale_features(features)
+
                 targets = generate_targets(citations, pmid)
                 training_example = [features, targets, pmid]
                 for target, feature_vec in zip(targets, features):
